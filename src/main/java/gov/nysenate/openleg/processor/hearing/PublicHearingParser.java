@@ -4,10 +4,8 @@ import gov.nysenate.openleg.model.hearing.PublicHearing;
 import gov.nysenate.openleg.model.hearing.PublicHearingCommittee;
 import gov.nysenate.openleg.model.hearing.PublicHearingFile;
 import gov.nysenate.openleg.model.hearing.PublicHearingId;
-import gov.nysenate.openleg.service.hearing.data.PublicHearingDataService;
 import gov.nysenate.openleg.util.PublicHearingTextUtils;
 import org.apache.commons.io.FileUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -20,23 +18,23 @@ import java.util.List;
 @Service
 public class PublicHearingParser
 {
-    @Autowired
-    private PublicHearingDataService dataService;
+    private final PublicHearingTextParser textParser;
+    private final PublicHearingTitleParser titleParser;
+    private final PublicHearingAddressParser addressParser;
+    private final PublicHearingDateParser dateTimeParser;
+    private final PublicHearingCommitteeParser committeeParser;
 
-    @Autowired
-    private PublicHearingTextParser textParser;
-
-    @Autowired
-    private PublicHearingTitleParser titleParser;
-
-    @Autowired
-    private PublicHearingAddressParser addressParser;
-
-    @Autowired
-    private PublicHearingDateParser dateTimeParser;
-
-    @Autowired
-    private PublicHearingCommitteeParser committeeParser;
+    public PublicHearingParser(PublicHearingTextParser textParser,
+                               PublicHearingTitleParser titleParser,
+                               PublicHearingAddressParser addressParser,
+                               PublicHearingDateParser dateTimeParser,
+                               PublicHearingCommitteeParser committeeParser) {
+        this.textParser = textParser;
+        this.titleParser = titleParser;
+        this.addressParser = addressParser;
+        this.dateTimeParser = dateTimeParser;
+        this.committeeParser = committeeParser;
+    }
 
     /**
      * Parses a {@link PublicHearingFile}, extracting a
@@ -44,7 +42,7 @@ public class PublicHearingParser
      * @param publicHearingFile
      * @throws IOException
      */
-    public void process(PublicHearingFile publicHearingFile) throws IOException {
+    public PublicHearing parseHearingFile(PublicHearingFile publicHearingFile) throws IOException {
         final List<List<String>> pages = PublicHearingTextUtils.getPages(
                 FileUtils.readFileToString(publicHearingFile.getFile(), Charset.defaultCharset()));
         final List<String> firstPage = pages.get(0);
@@ -69,6 +67,6 @@ public class PublicHearingParser
         publicHearing.setModifiedDateTime(now);
         publicHearing.setPublishedDateTime(now);
 
-        dataService.savePublicHearing(publicHearing, publicHearingFile, true);
+        return publicHearing;
     }
 }

@@ -5,7 +5,6 @@ import gov.nysenate.openleg.model.hearing.PublicHearing;
 import gov.nysenate.openleg.model.hearing.PublicHearingId;
 import gov.nysenate.openleg.service.hearing.data.PublicHearingDataService;
 import gov.nysenate.openleg.service.hearing.data.PublicHearingNotFoundEx;
-import org.apache.pdfbox.exceptions.COSVisitorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,9 +51,6 @@ public class PublicHearingPdfCtrl
             headers.setContentType(MediaType.parseMediaType("application/pdf"));
             return new ResponseEntity<>(pdfBytes.toByteArray(), headers, HttpStatus.OK);
         } catch (PublicHearingNotFoundEx ex) {
-            response.sendError(404, ex.getMessage());
-        } catch (COSVisitorException ex) {
-            logger.error("Failed to return transcript PDF", ex);
             response.sendError(404, ex.getMessage());
         }
         return null;

@@ -3,12 +3,18 @@ package gov.nysenate.openleg.client.view.transcript;
 import gov.nysenate.openleg.model.transcript.Transcript;
 import gov.nysenate.openleg.processor.transcript.TranscriptLine;
 import gov.nysenate.openleg.util.TranscriptTextUtils;
-import org.apache.pdfbox.exceptions.COSVisitorException;
+import gov.nysenate.openleg.util.pdf.PdfLineException;
+import gov.nysenate.openleg.util.pdf.PdfPageException;
+import gov.nysenate.openleg.util.pdf.PdfRenderException;
+import gov.nysenate.openleg.util.pdf.PdfUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.edit.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -21,6 +27,9 @@ import java.util.List;
  */
 public class TranscriptPdfView
 {
+
+    private static final Logger logger = LoggerFactory.getLogger(TranscriptPdfView.class);
+
     // Kirkland started on May 16, 2011
     private static LocalDateTime KIRKLAND_START_TIME = LocalDateTime.of(2011, 5, 16, 0, 0, 0);
 
@@ -45,7 +54,7 @@ public class TranscriptPdfView
     public static final int NO_LINE_NUM_INDENT = 11;
     public static final int STENOGRAPHER_LINE_NUM = 26;
 
-    public static void writeTranscriptPdf(Transcript transcript, OutputStream outputStream) throws IOException, COSVisitorException {
+    public static void writeTranscriptPdf(Transcript transcript, OutputStream outputStream) throws IOException {
         if (transcript == null) {
             throw new IllegalArgumentException("Supplied transcript cannot be null when converting to pdf.");
         }
@@ -53,22 +62,30 @@ public class TranscriptPdfView
         try (PDDocument doc = new PDDocument()) {
             PDFont font = PDType1Font.COURIER;
             List<List<String>> pages = TranscriptTextUtils.getPdfFormattedPages(transcript.getText());
+            int pageNumber = 1;
             for (List<String> page : pages) {
-                PDPage pg = new PDPage(PDPage.PAGE_SIZE_LETTER);
-                PDPageContentStream contentStream = new PDPageContentStream(doc, pg);
-                drawBorder(contentStream);
-                contentStream.beginText();
-                contentStream.setFont(font, fontSize);
-                moveStreamToTopOfPage(contentStream);
+                try {
+                    PDPage pg = new PDPage(PDRectangle.LETTER);
+                    PDPageContentStream contentStream = new PDPageContentStream(doc, pg);
+                    drawBorder(contentStream);
+                    contentStream.beginText();
+                    contentStream.setFont(font, fontSize);
+                    moveStreamToTopOfPage(contentStream);
 
-                int lineCount = drawPageText(page, contentStream);
-                drawStenographer(transcript, contentStream, lineCount);
+                    int lineCount = drawPageText(page, contentStream);
+                    drawStenographer(transcript, contentStream, lineCount);
 
-                contentStream.endText();
-                contentStream.close();
-                doc.addPage(pg);
+                    contentStream.endText();
+                    contentStream.close();
+                    doc.addPage(pg);
+                } catch (Exception ex) {
+                    throw new PdfPageException(pageNumber, ex);
+                }
+                pageNumber++;
             }
             doc.save(outputStream);
+        } catch (Exception ex) {
+            throw new PdfRenderException(transcript.getTranscriptId().getFilename(), "transcript", ex);
         }
     }
 
@@ -90,9 +107,12 @@ public class TranscriptPdfView
 
             if (line.isPageNumber()) {
                 drawPageNumber(line.fullText().trim(), contentStream);
-            }
-            else {
-                drawText(contentStream, line);
+            } else {
+                try {
+                    drawText(contentStream, line);
+                } catch (Exception ex) {
+                    throw new PdfLineException(lineCount, line.fullText(), ex);
+                }
                 lineCount++;
             }
         }
@@ -115,28 +135,40 @@ public class TranscriptPdfView
         drawLine(text, offset, contentStream);
     }
 
+    private static void drawLine(PDPageContentStream contentStream,
+                                 float xStart, float yStart, float xEnd, float yEnd) throws IOException {
+        contentStream.moveTo(xStart, yStart);
+        contentStream.lineTo(xEnd, yEnd);
+        contentStream.stroke();
+    }
+
     private static void drawBorder(PDPageContentStream contentStream) throws IOException {
-        contentStream.drawLine(left, top, left, bot);
-        contentStream.drawLine(left, top, right, top);
-        contentStream.drawLine(left, bot, right, bot);
-        contentStream.drawLine(right, top, right, bot);
+        drawLine(contentStream, left, top, left, bot);
+        drawLine(contentStream, left, top, right, top);
+        drawLine(contentStream, left, bot, right, bot);
+        drawLine(contentStream, right, top, right, bot);
     }
 
     private static void drawLine(String line, float offset, PDPageContentStream contentStream) throws IOException {
-        contentStream.moveTextPositionByAmount(offset, -fontSize);
-        contentStream.drawString(line);
-        contentStream.moveTextPositionByAmount(-offset, -fontSize);
+        contentStream.newLineAtOffset(offset, -fontSize);
+        try {
+            contentStream.showText(PdfUtils.sanitize(line));
+        } catch (Exception ex) {
+            logger.error("Error while attempting to draw line: \"" + line + "\"");
+            throw ex;
+        }
+        contentStream.newLineAtOffset(-offset, -fontSize);
     }
 
     private static void drawPageNumber(String line, PDPageContentStream contentStream) throws IOException {
         float offset = right - (line.length() + 1) * fontWidth;
-        contentStream.moveTextPositionByAmount(offset, fontWidth * 2);
-        contentStream.drawString(line);
-        contentStream.moveTextPositionByAmount(-offset, -fontSize * 2);
+        contentStream.newLineAtOffset(offset, fontWidth * 2);
+        contentStream.showText(line);
+        contentStream.newLineAtOffset(-offset, -fontSize * 2);
     }
 
     private static void moveStreamToTopOfPage(PDPageContentStream contentStream) throws IOException {
-        contentStream.moveTextPositionByAmount(0, top - fontWidth);
+        contentStream.newLineAtOffset(0, top - fontWidth);
     }
 
     private static int lineNumberLength(TranscriptLine line) {
@@ -161,7 +193,7 @@ public class TranscriptPdfView
         }
 
         float offset = (lineCount - STENOGRAPHER_LINE_NUM) * 2 * fontSize; // * 2 because of double spacing.
-        contentStream.moveTextPositionByAmount(left + (right - left - stenographer.length() * fontWidth) / 2, offset);
-        contentStream.drawString(stenographer);
+        contentStream.newLineAtOffset(left + (right - left - stenographer.length() * fontWidth) / 2, offset);
+        contentStream.showText(stenographer);
     }
 }

@@ -8,10 +8,10 @@ import gov.nysenate.openleg.model.bill.BillTextFormat;
 import gov.nysenate.openleg.service.bill.data.BillAmendNotFoundEx;
 import gov.nysenate.openleg.util.BillTextUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.pdfbox.exceptions.COSVisitorException;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.edit.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.jsoup.Jsoup;
@@ -60,9 +60,8 @@ public class BillPdfView {
      * @param version      Version - Identifies an amendment in the passed in bill that will have its text converted to pdf
      * @param outputStream OutputStream - The stream which will accept the pdf data
      * @throws IOException
-     * @throws COSVisitorException
      */
-    public static void writeBillPdf(Bill bill, Version version, OutputStream outputStream) throws IOException, COSVisitorException {
+    public static void writeBillPdf(Bill bill, Version version, OutputStream outputStream) throws IOException {
         if (bill == null) {
             throw new IllegalArgumentException("Supplied bill cannot be null when converting to pdf!");
         }
@@ -150,7 +149,7 @@ public class BillPdfView {
         }
     }
 
-    private static void writePlainTextPdf(BillId billId, String fullText, OutputStream outputStream) throws IOException, COSVisitorException {
+    private static void writePlainTextPdf(BillId billId, String fullText, OutputStream outputStream) throws IOException {
         List<List<String>> pages;
         if (StringUtils.isBlank(fullText)) {
             pages = Collections.singletonList(Collections.singletonList(
@@ -168,14 +167,14 @@ public class BillPdfView {
                 margin = resolutionMargin;
             }
             for (List<String> page : pages) {
-                PDPage pg = new PDPage(PDPage.PAGE_SIZE_LETTER);
+                PDPage pg = new PDPage(PDRectangle.LETTER);
                 PDPageContentStream contentStream = new PDPageContentStream(doc, pg);
                 contentStream.beginText();
                 contentStream.setFont(font, fontSize);
-                contentStream.moveTextPositionByAmount(margin, top);
+                contentStream.newLineAtOffset(margin, top);
                 for (String line : page) {
-                    contentStream.drawString(line);
-                    contentStream.moveTextPositionByAmount(0, -fontSize);
+                    contentStream.showText(line);
+                    contentStream.newLineAtOffset(0, -fontSize);
                 }
                 contentStream.endText();
                 contentStream.close();

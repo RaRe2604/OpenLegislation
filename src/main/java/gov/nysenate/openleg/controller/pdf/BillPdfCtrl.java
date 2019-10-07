@@ -9,7 +9,6 @@ import gov.nysenate.openleg.model.bill.BillTextFormat;
 import gov.nysenate.openleg.service.bill.data.BillAmendNotFoundEx;
 import gov.nysenate.openleg.service.bill.data.BillDataService;
 import gov.nysenate.openleg.service.bill.data.BillNotFoundEx;
-import org.apache.pdfbox.exceptions.COSVisitorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,7 +65,7 @@ public class BillPdfCtrl extends BaseCtrl
             }
         } catch (BillNotFoundEx | BillAmendNotFoundEx ex) {
             response.sendError(404, ex.getMessage());
-        } catch (IOException | URISyntaxException | COSVisitorException ex) {
+        } catch (IOException | URISyntaxException ex) {
             logger.error("Exception in bill pdf viewer.", ex);
             response.sendError(404, "PDF text for " + printNo + " " + sessionYear + " is not available.");
         }

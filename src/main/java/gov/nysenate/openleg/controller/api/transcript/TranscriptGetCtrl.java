@@ -19,7 +19,6 @@ import gov.nysenate.openleg.model.transcript.TranscriptId;
 import gov.nysenate.openleg.model.transcript.TranscriptNotFoundEx;
 import gov.nysenate.openleg.service.transcript.data.TranscriptDataService;
 import gov.nysenate.openleg.service.transcript.search.TranscriptSearchService;
-import org.apache.pdfbox.exceptions.COSVisitorException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -28,7 +27,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
 
-import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.stream.Collectors;
@@ -125,7 +123,7 @@ public class TranscriptGetCtrl extends BaseCtrl
      */
     @RequestMapping("/{filename}.pdf")
     public ResponseEntity<byte[]> getTranscriptPdf(@PathVariable String filename)
-            throws IOException, COSVisitorException {
+            throws IOException {
         TranscriptId transcriptId = new TranscriptId(filename);
         Transcript transcript = transcriptData.getTranscript(transcriptId);
         ByteArrayOutputStream pdfBytes = new ByteArrayOutputStream();

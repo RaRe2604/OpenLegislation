@@ -2,29 +2,34 @@ package gov.nysenate.openleg.processor.hearing;
 
 import gov.nysenate.openleg.dao.base.LimitOffset;
 import gov.nysenate.openleg.dao.hearing.PublicHearingFileDao;
+import gov.nysenate.openleg.model.hearing.PublicHearing;
 import gov.nysenate.openleg.model.hearing.PublicHearingFile;
 import gov.nysenate.openleg.model.hearing.PublicHearingId;
+import gov.nysenate.openleg.service.hearing.data.PublicHearingDataService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 @Service
 public class ManagedPublicHearingProcessService implements PublicHearingProcessService
 {
     private static Logger logger = LoggerFactory.getLogger(ManagedPublicHearingProcessService.class);
 
-    @Autowired
-    private PublicHearingFileDao publicHearingFileDao;
+    private final PublicHearingFileDao publicHearingFileDao;
+    private final PublicHearingDataService publicHearingDataService;
+    private final PublicHearingParser publicHearingParser;
 
-    @Autowired
-    private PublicHearingParser publicHearingParser;
+    public ManagedPublicHearingProcessService(PublicHearingFileDao publicHearingFileDao,
+                                              PublicHearingDataService publicHearingDataService,
+                                              PublicHearingParser publicHearingParser) {
+        this.publicHearingFileDao = publicHearingFileDao;
+        this.publicHearingDataService = publicHearingDataService;
+        this.publicHearingParser = publicHearingParser;
+    }
 
     /** --- Implemented Methods --- */
 
@@ -84,7 +89,8 @@ public class ManagedPublicHearingProcessService implements PublicHearingProcessS
         for (PublicHearingFile file : publicHearingFiles) {
             try {
                 logger.info("Processing PublicHearingFile: " + file.getFileName());
-                publicHearingParser.process(file);
+                PublicHearing publicHearing = publicHearingParser.parseHearingFile(file);
+                publicHearingDataService.savePublicHearing(publicHearing, file, true);
                 file.setProcessedCount(file.getProcessedCount() + 1);
                 file.setPendingProcessing(false);
                 file.setProcessedDateTime(LocalDateTime.now());

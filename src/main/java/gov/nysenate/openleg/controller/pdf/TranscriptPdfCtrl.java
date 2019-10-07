@@ -5,7 +5,6 @@ import gov.nysenate.openleg.model.transcript.Transcript;
 import gov.nysenate.openleg.model.transcript.TranscriptId;
 import gov.nysenate.openleg.model.transcript.TranscriptNotFoundEx;
 import gov.nysenate.openleg.service.transcript.data.TranscriptDataService;
-import org.apache.pdfbox.exceptions.COSVisitorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,10 +52,6 @@ public class TranscriptPdfCtrl
             return new ResponseEntity<>(pdfBytes.toByteArray(), headers, HttpStatus.OK);
         }
         catch (TranscriptNotFoundEx ex) {
-            response.sendError(404, ex.getMessage());
-        }
-        catch (COSVisitorException ex) {
-            logger.error("Failed to return transcript PDF", ex);
             response.sendError(404, ex.getMessage());
         }
         return null;

@@ -1,11 +1,11 @@
 package gov.nysenate.openleg.client.view.hearing;
 
 import gov.nysenate.openleg.model.hearing.PublicHearing;
+import gov.nysenate.openleg.util.pdf.PdfUtils;
 import gov.nysenate.openleg.util.PublicHearingTextUtils;
-import org.apache.pdfbox.exceptions.COSVisitorException;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.edit.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
@@ -23,7 +23,7 @@ public class PublicHearingPdfView
     private static Float margin = 10f;
 
     public static void writePublicHearingPdf(PublicHearing publicHearing, OutputStream outputStream)
-            throws IOException, COSVisitorException {
+            throws IOException {
         if (publicHearing == null) {
             throw new IllegalArgumentException("Supplied Public Hearing cannot be null when converting to pdf.");
         }
@@ -37,7 +37,7 @@ public class PublicHearingPdfView
             PDPageContentStream contentStream = new PDPageContentStream(doc, pg);
             contentStream.beginText();
             contentStream.setFont(font, fontSize);
-            contentStream.moveTextPositionByAmount(margin, top);
+            contentStream.newLineAtOffset(margin, top);
             drawPage(contentStream, page);
             contentStream.endText();
             contentStream.close();
@@ -49,8 +49,8 @@ public class PublicHearingPdfView
 
     private static void drawPage(PDPageContentStream contentStream, List<String> page) throws IOException {
         for (String line : page) {
-            contentStream.drawString(line);
-            contentStream.moveTextPositionByAmount(0, -fontSize);
+            contentStream.showText(PdfUtils.sanitize(line));
+            contentStream.newLineAtOffset(0, -fontSize);
         }
     }
 }

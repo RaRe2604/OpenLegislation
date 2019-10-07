@@ -34,10 +34,7 @@ public class PublicHearingTextUtils
 
     private static boolean endOfPage(String line) {
         // Check for form feed character.
-        if (line.contains("\f")) {
-            return true;
-        }
-        return false;
+        return line.contains("\f");
     }
 
     /**
